@@ -10,7 +10,7 @@ DATASET_PATH=$1
 META_PATH=$2
 
 # Fixed variables
-OUTPUT_PATH="/output_data_atefeh"
+OUTPUT_PATH="/kaggle/working/output_data_atefeh"
 NUM_WORKERS=4
 
 # Check if the required arguments are provided
