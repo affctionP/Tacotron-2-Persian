@@ -15,6 +15,8 @@ from tac2persian.models.modules_tacotron2 import pad_mask
 from tac2persian.utils.plot import plot_attention, plot_spectrogram
 from tac2persian.utils.display import stream
 
+import torch
+torch.autograd.set_detect_anomaly(True)
 
 class TacotronTrainer():
     def __init__(self, config, path_manager, model):
@@ -54,20 +56,46 @@ class TacotronTrainer():
                                                           eval=True, 
                                                           binned_sampler=True)
 
-    def _compute_loss(self, 
-                      outputs, 
-                      postnet_outputs, 
-                      mel, 
-                      mel_len, 
-                      stop_values, 
-                      stop_labels):
+    # def _compute_loss(self, 
+    #                   outputs, 
+    #                   postnet_outputs, 
+    #                   mel, 
+    #                   mel_len, 
+    #                   stop_values, 
+    #                   stop_labels):
+    #     # Mel-spec loss
+    #     l1_loss = self.l1_criterion(postnet_outputs, mel) + self.l1_criterion(outputs, mel)
+    #     mse_loss = self.mse_criterion(postnet_outputs, mel) + self.mse_criterion(outputs, mel)
+       
+    #     # Stop loss
+    #     bce_loss = self.bce_criterion(stop_values, stop_labels)
+        
+    #     # Compute weight masks and apply reduction
+    #     if self.config["use_weighted_masking"]:
+    #         r = self.model.get_reduction_factor() 
+    #         mel_len_ = mel_len.cpu().numpy()
+    #         masks = pad_mask(mel_len_, r).unsqueeze(-1).to(self.device)
+    #         weights = masks.float() / masks.sum(dim=1, keepdim=True).float()
+    #         out_weights = weights.div(mel.size(0) * mel.size(2))
+    #         logit_weights = weights.div(mel.size(0))
+            
+    #         # Apply weight
+    #         l1_loss = l1_loss.mul(out_weights).masked_select(masks).sum()
+    #         mse_loss = mse_loss.mul(out_weights).masked_select(masks).sum()
+    #         bce_loss = bce_loss.mul(logit_weights.squeeze(-1)).masked_select(masks.squeeze(-1)).sum()
+        
+    #     # Compute total loss
+    #     loss = l1_loss + mse_loss + bce_loss
+
+    #     return loss, l1_loss, mse_loss, bce_loss
+    def _compute_loss(self, outputs, postnet_outputs, mel, mel_len, stop_values, stop_labels):
         # Mel-spec loss
         l1_loss = self.l1_criterion(postnet_outputs, mel) + self.l1_criterion(outputs, mel)
         mse_loss = self.mse_criterion(postnet_outputs, mel) + self.mse_criterion(outputs, mel)
-       
+
         # Stop loss
         bce_loss = self.bce_criterion(stop_values, stop_labels)
-        
+
         # Compute weight masks and apply reduction
         if self.config["use_weighted_masking"]:
             r = self.model.get_reduction_factor() 
@@ -76,12 +104,12 @@ class TacotronTrainer():
             weights = masks.float() / masks.sum(dim=1, keepdim=True).float()
             out_weights = weights.div(mel.size(0) * mel.size(2))
             logit_weights = weights.div(mel.size(0))
-            
-            # Apply weight
-            l1_loss = l1_loss.mul(out_weights).masked_select(masks).sum()
-            mse_loss = mse_loss.mul(out_weights).masked_select(masks).sum()
-            bce_loss = bce_loss.mul(logit_weights.squeeze(-1)).masked_select(masks.squeeze(-1)).sum()
-        
+
+            # Apply weight without modifying in-place
+            l1_loss = (l1_loss * out_weights).masked_select(masks).sum()
+            mse_loss = (mse_loss * out_weights).masked_select(masks).sum()
+            bce_loss = (bce_loss * logit_weights.squeeze(-1)).masked_select(masks.squeeze(-1)).sum()
+
         # Compute total loss
         loss = l1_loss + mse_loss + bce_loss
 
