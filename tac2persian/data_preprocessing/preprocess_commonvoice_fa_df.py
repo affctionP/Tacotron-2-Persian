@@ -49,7 +49,7 @@ def compute_features(source_audio_path,
         traceback.print_exc()
         return None
 
-def preprocess(dataset_path,meta_path, output_path, config, num_workers):
+def preprocess(dataset_path, output_path, config, num_workers,meta_path):
     r"""Preprocesses audio files in the dataset."""
     
     # Load G2P module
