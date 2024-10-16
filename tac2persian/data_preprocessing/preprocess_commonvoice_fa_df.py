@@ -61,7 +61,7 @@ def preprocess(dataset_path, output_path, config, num_workers,meta_path):
     metafile = []
 
 
-    df=pd.read_csv(meta_path)
+    df=pd.read_csv(meta_path, dtype={'filename': str})
     count_files=len(df)
     speaker_name = "speaker_fa_atefeh"
     out_melspecs_path = os.path.join(output_path, "melspecs")
