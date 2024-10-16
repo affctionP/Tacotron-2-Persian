@@ -105,4 +105,4 @@ if __name__ == "__main__":
     # target_speakers = ["b8e506d7d9b5f2a9cfb4e08a088819f7f54bfd8c3e0ab86d80f07b48fb50981da2264ed13ff1a77fefbaccc6a014a530bace3d0ac32e2c993ebf0ed0dd1712a8"]
 
     config = load_config(os.path.join(args.config_path, "config.yml"))
-    preprocess(args.dataset_path, args.output_path, config, args.num_workers)
+    preprocess(args.dataset_path, args.output_path, config, args.num_workers,args.meta_path)
