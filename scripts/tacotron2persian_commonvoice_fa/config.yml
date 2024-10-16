@@ -54,8 +54,8 @@ run_name: "commonvoice_fa"
 num_workers: 3
 datasets:
   commonvoice_fa:
-    dataset_path: "/kaggle/working/output_data_atefeh/"
+    dataset_path: "/kaggle/working/output_data_atefeh"
     max_mel_len: 1000
     train_metafile: "metadata_train.txt"
-    eval_metafile: "metadata_train.txt"                      
-    speakers_list: ["speaker_fa_0"]
+    eval_metafile: "metadata_eval.txt"                      
+    speakers_list: ["speaker_fa_atefeh"]
