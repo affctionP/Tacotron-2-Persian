@@ -53,7 +53,8 @@ class Encoder(nn.Module):
         # Conv layers    
         for i in range(len(self.conv_layers)):
             if self.conv_residual:
-                x += self.conv_layers[i](x)
+                #x += self.conv_layers[i](x)
+                x = x + self.conv_layers[i](x)
             else:
                 x = self.conv_layers[i](x)
 
