@@ -49,7 +49,7 @@ def compute_features(source_audio_path,
         traceback.print_exc()
         return None
 
-def preprocess(dataset_path, output_path, config, num_workers):
+def preprocess(dataset_path,meta_path, output_path, config, num_workers):
     r"""Preprocesses audio files in the dataset."""
     
     # Load G2P module
@@ -61,7 +61,7 @@ def preprocess(dataset_path, output_path, config, num_workers):
     metafile = []
 
 
-    df=pd.read_csv(dataset_path+'filtered_dataframe.csv')
+    df=pd.read_csv(meta_path)
     count_files=len(df)
     speaker_name = "speaker_fa_atefeh"
     out_melspecs_path = os.path.join(output_path, "melspecs")
@@ -99,6 +99,7 @@ if __name__ == "__main__":
     parser.add_argument("--dataset_path", type=str, required=True)
     parser.add_argument("--output_path", type=str, required=True)
     parser.add_argument("--config_path", type=str, required=True)
+    parser.add_argument("--meta_path", type=str, required=True)
     parser.add_argument("--num_workers", type=int, default=5)
     args = parser.parse_args()
     # target_speakers = ["b8e506d7d9b5f2a9cfb4e08a088819f7f54bfd8c3e0ab86d80f07b48fb50981da2264ed13ff1a77fefbaccc6a014a530bace3d0ac32e2c993ebf0ed0dd1712a8"]
