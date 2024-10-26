@@ -87,3 +87,6 @@ class Tacotron2(nn.Module):
 
     def reset_step(self):
         self.step = self.step.data.new_tensor(1)
+
+    def set_step(self, step_value):
+        self.step = self.step.data.new_tensor(step_value)

@@ -19,7 +19,7 @@ import torch
 torch.autograd.set_detect_anomaly(True)
 
 class TacotronTrainer():
-    def __init__(self, config, path_manager, model):
+    def __init__(self, config, path_manager, model,checkpoint_path=None):
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         self.config = config
         self.path_manager = path_manager
@@ -27,6 +27,11 @@ class TacotronTrainer():
         self.writer = SummaryWriter(log_dir=self.path_manager.logs_path)
         self._init_criterion_optimizer()
         self._init_dataloaders()
+
+
+        # Load checkpoint if specified
+        if checkpoint_path and os.path.isfile(checkpoint_path):
+            self._load_checkpoint(checkpoint_path)
 
     def _init_criterion_optimizer(self):
         reduction = "none" if self.config["use_weighted_masking"] else "mean"
@@ -56,38 +61,22 @@ class TacotronTrainer():
                                                           eval=True, 
                                                           binned_sampler=True)
 
-    # def _compute_loss(self, 
-    #                   outputs, 
-    #                   postnet_outputs, 
-    #                   mel, 
-    #                   mel_len, 
-    #                   stop_values, 
-    #                   stop_labels):
-    #     # Mel-spec loss
-    #     l1_loss = self.l1_criterion(postnet_outputs, mel) + self.l1_criterion(outputs, mel)
-    #     mse_loss = self.mse_criterion(postnet_outputs, mel) + self.mse_criterion(outputs, mel)
-       
-    #     # Stop loss
-    #     bce_loss = self.bce_criterion(stop_values, stop_labels)
-        
-    #     # Compute weight masks and apply reduction
-    #     if self.config["use_weighted_masking"]:
-    #         r = self.model.get_reduction_factor() 
-    #         mel_len_ = mel_len.cpu().numpy()
-    #         masks = pad_mask(mel_len_, r).unsqueeze(-1).to(self.device)
-    #         weights = masks.float() / masks.sum(dim=1, keepdim=True).float()
-    #         out_weights = weights.div(mel.size(0) * mel.size(2))
-    #         logit_weights = weights.div(mel.size(0))
-            
-    #         # Apply weight
-    #         l1_loss = l1_loss.mul(out_weights).masked_select(masks).sum()
-    #         mse_loss = mse_loss.mul(out_weights).masked_select(masks).sum()
-    #         bce_loss = bce_loss.mul(logit_weights.squeeze(-1)).masked_select(masks.squeeze(-1)).sum()
-        
-    #     # Compute total loss
-    #     loss = l1_loss + mse_loss + bce_loss
+    def _load_checkpoint(self, checkpoint_path):
 
-    #     return loss, l1_loss, mse_loss, bce_loss
+    
+        checkpoint = torch.load(checkpoint_path, map_location=self.device)
+        self.model.load_state_dict(checkpoint, strict=False)
+        # self.model.load_state_dict(checkpoint["model_state_dict"])
+        # self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        if 'step' in checkpoint:
+            self.model.set_step(checkpoint['step'])  
+            print(f"Checkpoint loaded successfully, resuming from step {checkpoint['step']}")
+
+
+
+
+
+
     def _compute_loss(self, outputs, postnet_outputs, mel, mel_len, stop_values, stop_labels):
         # Mel-spec loss
         l1_loss = self.l1_criterion(postnet_outputs, mel) + self.l1_criterion(outputs, mel)
@@ -223,11 +212,21 @@ class TacotronTrainer():
             self.writer.add_scalar("eval/loss", l1_loss.item(), epoch)
         self.model.train()
 
+    # def _save_checkpoint(self):
+    #     k = self.model.get_step() // 1000
+    #     checkpoint_path = os.path.join(self.path_manager.checkpoints_path, f"checkpoint_{k}K.pt")
+    #     torch.save(self.model.state_dict(), checkpoint_path)
     def _save_checkpoint(self):
-        k = self.model.get_step() // 1000
+        step = self.model.get_step()
+        k = step // 1000
         checkpoint_path = os.path.join(self.path_manager.checkpoints_path, f"checkpoint_{k}K.pt")
-        torch.save(self.model.state_dict(), checkpoint_path)
+        torch.save({
+            "model_state_dict": self.model.state_dict(),
+            "optimizer_state_dict": self.optimizer.state_dict(),
+            "step": step
+        }, checkpoint_path)
 
+    ################
 
 def main(args):
     # Load config
@@ -244,14 +243,14 @@ def main(args):
     # Model
     model = Tacotron2(**config["model"])
 
-    # Trainer
-    trainer = TacotronTrainer(config, path_manager, model)
+    # Trainer with optional checkpoint path
+    trainer = TacotronTrainer(config, path_manager, model, checkpoint_path=args.checkpoint_path)
     trainer.train()
 
 
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("--config_path", type=str, required=True)
+    parser.add_argument("--checkpoint_path", type=str, default=None, help="Path to a checkpoint file to resume training")
     args = parser.parse_args()
-
     main(args)
